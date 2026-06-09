@@ -9,9 +9,12 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "prisma:generate": "prisma generate",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
