@@ -1,8 +1,7 @@
-```markdown
 # Product Requirements Document
 # IDSMS-CIS: Internship Document Submission and Monitoring System for CIS
 
-**Version:** 1.1 *(Revised to address architectural, logical, and specification gaps)*  
+**Version:** 1.2 *(Comprehensive Sprint Planning & Full Specification)*  
 **Date:** April 2026  
 **Institution:** Saint Louis University — SAMCIS  
 **Course:** IT 321  
@@ -491,54 +490,98 @@ Vercel (CDN/serverless) | Supabase (DB/Storage/RLS) | Gemini API | Resend | Pupp
 
 ---
 
-## Sprint Development Plan
+## Development Phases & Sprint Plan
 
-### Sprint 1 — Authentication & User Management
-**Focus:** Core identity and access foundation  
-**Deliverable:** Working login system with RBAC middleware; role-gated navigation and dashboards for all four user roles; student profile screens; first-login password change flow; password reset flow.
-- User registration (CSV/Excel bulk import of students)
-- RBAC (Four roles with distinct UI and API access gates, including `faculty_class_groups` junction logic)
-- Session management (Auto-expiry after configurable inactivity period)
-- First-login enforcement (Forced password change before accessing any feature)
-- Student profile setup (Program, class group, semester linkage)
-- MFA (OTP/email-based multi-factor authentication support)
-- Audit logging (Immutable log for login attempts and role events)
-- Password Reset Flow (Magic link, 1-hour expiry)
+To ensure systematic delivery, mitigate risks, and accommodate the 8-person capstone team structure, development is divided into **6 distinct phases**. Each phase spans approximately 2 weeks, with adviser-guided milestone checkpoints replacing traditional Scrum sprint reviews.
 
-### Sprint 2 — Company, MOA & Pre-Deployment
-**Focus:** Pre-deployment compliance workflow  
-**Deliverable:** Complete pre-deployment workflow from student login to endorsement readiness; company/MOA module with expiry alerts; checklist submission and faculty approval workflows; strict endorsement letter lock enforcement.
-- Company profile registration (Autocomplete, duplicate detection)
-- MOA record management (PDF/Drive upload, validity, programs, stage tracking)
-- MOA expiry alerts (Automated email + in-app alerts to coordinator)
-- Pre-deployment checklist (Nine documents per student, approve/return/comment per item)
-- Work plan submission (Institutional template, coordinator review workflow)
-- Endorsement letter gating (Blocked until all nine checklist items approved; work plan approval only queues `pending_draft`)
+### Phase 0: Project Initialization & Environment Setup
+**Objective:** Establish a robust, secure, and collaborative foundation for the entire development lifecycle.  
+**Duration:** 1.5 Weeks  
+**Key Tasks:**
+- **Repository & CI/CD:** Initialize Git repository, configure branch protection rules (`main`, `develop`), and set up GitHub Actions for automated linting, type-checking, and Vercel preview deployments.
+- **Database Setup:** Provision Supabase project. Manually execute `CREATE EXTENSION IF NOT EXISTS vector;` in the SQL editor. Configure Row Level Security (RLS) policies, specifically the append-only policy for `audit_logs`.
+- **Schema Definition:** Draft and finalize `schema.prisma` including the new `faculty_class_groups` junction table and `pgvector` custom types. Run initial `prisma db push`.
+- **Environment Configuration:** Set up `.env.local` templates with placeholders for `DATABASE_URL`, `NEXTAUTH_SECRET`, `GEMINI_API_KEY`, and `RESEND_API_KEY`.
+- **Code Quality:** Configure ESLint, Prettier, and Husky pre-commit hooks to enforce coding standards (NFR-MNT-04).
 
-### Sprint 3 — Deployment Phase: Attendance, Reports & Calendar
-**Focus:** Active deployment workflows and timeline tracking  
-**Deliverable:** Complete deployment-phase workflow; calendar-based attendance log; automated hours progress dashboard; structured weekly/monthly report submission and faculty review screens; Unified Calendar integration.
-- Schedule configuration (Fixed work schedule post-work-plan approval)
-- Schedule change handling (Mid-internship schedule change workflow with Faculty/Coordinator approval)
-- Calendar-based attendance (PH national/regional holidays, company non-working days)
-- Deviation reports (Absence/overtime/undertime with proof + faculty validation)
-- Automated hour computation (Total rendered, remaining, projected completion)
-- Weekly report submission (Auto-populated forms, client-side copy-paste detection)
-- Monthly report aggregation (Aggregated by calendar month, requires Approved/Regarded weekly reports)
-- Faculty review workflow (Approve/Return/Regard/Disregard with email triggers)
-- Unified Calendar views for all roles (Deadlines, holidays, projected completion dates)
+**Deliverables:** Live Vercel preview environment, initialized Prisma schema with successful migration, CI/CD pipeline passing on all pull requests.  
+**Acceptance Criteria:** Developers can clone the repo, run `npm install`, and start the dev server without errors. Supabase RLS is active, and the `vector` extension is verified.
 
-### Sprint 4 — AI Integration, Documents, Dashboard & Archiving
-**Focus:** Intelligence layer, full dashboards, notifications, archiving  
-**Deliverable:** Fully integrated system with AI-assisted faculty review; automated PDF document generation with reference codes and failure recovery; real-time compliance dashboards for all roles; notification system; semester archive module; system ready for UAT.
-- Similarity detection (Gemini `text-embedding-004` + pgvector, 0.70 threshold, cached)
-- Sentiment analysis (Gemini 2.5 Flash, Positive/Neutral/Negative + confidence)
-- PDF generation (Puppeteer — endorsement letters, weekly/monthly reports, final cover — with reference codes and retry logic)
-- Compliance dashboards (Per-student hours, checklist %, submission status, anomaly flags)
-- Notification system (12 triggers via Resend, consolidated daily Vercel Cron Jobs)
-- Semester archiving (End-of-semester archive + full audit logging)
-- Excel/CSV export (Compliance summaries, hours, checklists, flagged students)
-- DSAR workflow and file retention/cleanup job configuration
+---
+
+### Phase 1: Core Identity, RBAC & User Management
+**Objective:** Build a secure, role-gated authentication system and user onboarding workflow.  
+**Duration:** 2 Weeks  
+**Key Tasks:**
+- Implement NextAuth.js v4.24.x with credential provider and JWT strategy.
+- Build bulk student CSV/Excel import utility for Coordinators.
+- Develop first-login password enforcement and `/auth/reset-password` magic link flow (1-hour expiry).
+- Implement middleware route protection and service-layer record ownership validation.
+- Build basic profile views for all four roles.
+
+**Deliverables:** Functional login, registration, password reset, and role-gated routing.  
+**Acceptance Criteria:** A student cannot access another student's data via crafted API requests. Faculty advisers only see students linked via the `faculty_class_groups` junction table. Accounts lock after 5 failed attempts.
+
+---
+
+### Phase 2: Pre-Deployment & Compliance Workflow
+**Objective:** Digitize and enforce the pre-deployment checklist and MOA management.  
+**Duration:** 2 Weeks  
+**Key Tasks:**
+- Build Company Profile registration with autocomplete and duplicate detection.
+- Implement MOA lifecycle tracking (Drafting → Approved/Active → Expiring/Expired) with automated expiry alerts.
+- Develop the 9-item Pre-Deployment Checklist UI for students and Faculty review (Approve/Return with comments).
+- Implement Work Plan submission and Coordinator approval workflow.
+- **Crucial Logic:** Implement FR-WP-05 (Draft queuing) and FR-CK-04 (Strict 9/9 gating) to ensure endorsement letters cannot be generated until all items are approved.
+
+**Deliverables:** Complete pre-deployment module, MOA tracking, and strict endorsement letter gating.  
+**Acceptance Criteria:** Endorsement letter generation is physically blocked in the UI and API until all 9 checklist items show "Approved" status.
+
+---
+
+### Phase 3: Active Deployment, Attendance & Unified Calendar
+**Objective:** Enable active internship tracking, hour computation, and intuitive timeline management.  
+**Duration:** 2.5 Weeks  
+**Key Tasks:**
+- Build schedule configuration and deviation report submission (Absence/Overtime/Undertime) with Faculty validation.
+- Implement automated hour computation logic (rendered, remaining, projected completion) that only updates upon validated reports.
+- Develop Weekly Report submission with **client-side copy-paste detection** (FR-WR-04) and Late Submission Protocol (FR-WR-05).
+- Implement Faculty Review actions: Approve, Return, Regard, Disregard (FR-WR-06).
+- Build Monthly Report aggregation logic (Calendar month basis, requiring Approved/Regarded weekly reports).
+- **New:** Develop the Unified Calendar module for all roles (FR-CAL-01 to FR-CAL-04) displaying deadlines, holidays, and projected completion dates.
+
+**Deliverables:** Functional attendance tracking, report submission/review workflows, and the Unified Calendar.  
+**Acceptance Criteria:** Approved schedule changes do not retroactively alter past validated hours. Monthly reports cannot be submitted if any weekly report in that calendar month is "Returned" or "Pending".
+
+---
+
+### Phase 4: AI Integration, Document Generation & Notifications
+**Objective:** Integrate intelligence layers, automate PDF generation, and establish the notification backbone.  
+**Duration:** 2 Weeks  
+**Key Tasks:**
+- Implement server-side similarity detection using **Gemini `text-embedding-004`** + `pgvector` (FR-AI-01, FR-AI-02).
+- Implement sentiment analysis using Gemini 2.5 Flash, caching results to avoid live API calls on page load (FR-AI-05).
+- Build Puppeteer server-side PDF generation for Endorsement Letters, Weekly/Monthly Reports, and Final Cover Pages, including reference codes and **failure recovery retry logic** (FR-DG-07).
+- Configure Resend email templates and Vercel Cron Jobs (consolidated into a single daily evaluation to respect Hobby tier limits).
+- Enforce file upload size caps (5MB PDF, 2MB Image) to manage Supabase storage limits.
+
+**Deliverables:** AI advisory panels on Faculty Review pages, functional PDF generation with retry logic, and automated email notifications.  
+**Acceptance Criteria:** AI flags are strictly advisory and do not auto-reject reports. Failed PDF generations log an error, set status to `failed`, and provide a "Regenerate" button.
+
+---
+
+### Phase 5: Dashboards, Archiving, UAT & Hardening
+**Objective:** Polish role-specific dashboards, ensure compliance, and prepare for final deployment.  
+**Duration:** 2 Weeks  
+**Key Tasks:**
+- Finalize role-specific dashboards (Student, Faculty, Coordinator, Super Admin) with real-time KPI cards and export functions.
+- Implement Super Admin Export Center with MFA confirmation and DSAR workflow (NFR-DP-07).
+- Verify append-only RLS on `audit_logs` and implement quarterly file retention/cleanup job (NFR-DP-08).
+- Conduct Performance Testing (p95 TTFB ≤ 800ms) and Test Coverage validation (≥ 70% services, ≥ 90% critical logic).
+- Execute User Acceptance Testing (UAT) scenarios with selected interns, faculty, and coordinators.
+
+**Deliverables:** Fully polished dashboards, verified security/compliance measures, and UAT sign-off.  
+**Acceptance Criteria:** All UAT task scenarios pass. Audit logs cannot be updated or deleted by any user or service role. System meets all defined NFR thresholds.
 
 ---
 
@@ -547,101 +590,38 @@ Vercel (CDN/serverless) | Supabase (DB/Storage/RLS) | Gemini API | Resend | Pupp
 > **Note to frontend agents:** Each screen below defines the visible components, data displayed, pre-conditions, process flow, and documents produced. Use these specifications as the source of truth for component design. The color-coded status language used throughout the system is: **Green = Approved/Active**, **Yellow = Pending**, **Red = Returned/Overdue/Expired**, **Blue = Linked/System-tracked**, **Gray = Not Yet Submitted/Locked**.
 
 ### Authentication
-
-#### Screen: Login Page (`/login`)
-- **Layout:** Left panel (IDSMS logo, system full name, institution name, dark navy branding). Right panel ("Sign in to IDSMS" header, SLU Email Address input, Password input with show/hide toggle, "Forgot password?" link, "Log in to IDSMS" CTA button, first-time login helper text, security notice footer badges: "MFA Enabled", "DPA 2012 Compliant", "SLU Official Platform").
-- **Security notices inline:** "Account locked after 5 failed attempts · Session expires after 30 min of inactivity."
-- **Pre-conditions:** Active IDSMS account assigned by System Administrator; valid SLU institutional email; initial credentials sent via email; system live and accessible.
-- **Process:** User enters credentials → System validates → MFA prompt (if enabled) → Redirect to role-specific dashboard. Failed attempts increment lockout counter.
-
-#### Screen: Password Reset (`/auth/reset-password`) *(NEW)*
-- **Layout:** "Reset Password" header, SLU Email input, "Send Reset Link" CTA.
-- **Process:** User enters email → System checks if active → Sends 1-hour magic link → User clicks link → Enters new password (enforcing complexity rules) → Account unlocked (if lockout timer has passed) → Redirect to login.
+- **Login Page (`/login`):** Left panel (IDSMS logo, branding). Right panel (SLU Email, Password, "Forgot password?", "Log in" CTA, security notices).
+- **Password Reset (`/auth/reset-password`):** Email input, "Send Reset Link" CTA. 1-hour magic link validity.
 
 ### Student Role Screens
-
-#### Screen: Student Dashboard (`/student/dashboard`)
-- **Layout:** Header (Program badge, company name, work modality, academic year/semester). Three KPI cards: HOURS RENDERED, PRE-DEPLOYMENT DOCS, EST. COMPLETION. Main area (two columns): Left (Pre-Deployment Requirements table), Right (Weekly Reports table).
-- **Pre-conditions:** Student logged in with Student/Intern role. Internship details configured.
-- **Process:** Student reviews pending items and uses quick-action buttons. Endorsement Letter status shown as locked if items are pending.
-
-#### Screen: My Documents (`/student/documents`)
-- **Layout:** Summary header (Documents Complete, Last Upload, Endorsement Letter lock status). Pre-Deployment Requirements table (9 items with checkbox, REQUIREMENT name, SUBMITTED date, TYPE, STATUS, ACTION).
-- **Pre-conditions:** Student authenticated and enrolled in active internship semester.
-- **Process:** Student uploads/re-uploads Pending/Returned items. System refreshes checklist progress and notifies faculty.
-
-#### Screen: Weekly Reports (`/student/reports/weekly`)
-- **Layout:** Report info (auto-filled, read-only). Daily Accomplishments section (collapsible rows per working day: date, time range, hours, attendance radio, accomplishment text area, tools used). AI Quality Assessment panel (Similarity, Descriptions, Sentiment, Disclaimer). Footer (HOURS THIS WEEK, RUNNING TOTAL, REMAINING, Cancel, Preview PDF, Submit Report).
-- **Pre-conditions:** Student logged in, current week's report period open, not already submitted.
-- **Process:** Student fills daily activities → Client-side copy-paste check runs → AI tool runs similarity/sentiment check → Student reviews AI panel → Previews PDF → Submits.
-
-#### Screen: Attendance Log (`/student/attendance`)
-- **Layout:** Summary cards (Days Present, Absences, Holidays, Overtime Days). Filter tabs. Attendance table (grouped by week: DATE, STATUS, SCHED., ACTUAL, DEVIATION, NOTE, VALIDATED). Export CSV button.
-- **Pre-conditions:** Student logged in. At least one weekly report submitted and validated.
-
-#### Screen: Student Calendar (`/student/calendar`) *(NEW)*
-- **Layout:** Full-month calendar view.
-- **Events:** Red dots for Report Deadlines, Gray blocks for Holidays, Yellow blocks for Approved Deviations.
-- **Prominent Banner:** "Projected OJT Completion: [Date] (On Track)" calculated dynamically based on rendered hours and approved schedule.
-
-#### Screen: My Profile (`/student/profile`) & Settings (`/student/settings`)
-- **Layout:** Personal Information, Internship Assignment (read-only), Notification Preferences, Email Notifications toggles, Security (Password update), Display preferences. DSAR "Request my data" button in Settings.
+- **Student Dashboard (`/student/dashboard`):** KPI cards (Hours Rendered, Pre-Deployment Docs, Est. Completion). Pre-Deployment Requirements table, Weekly Reports table.
+- **My Documents (`/student/documents`):** 9-item checklist with Upload/Re-upload actions. Endorsement Letter lock status.
+- **Weekly Reports (`/student/reports/weekly`):** Auto-filled report info, daily accomplishment rows, AI Quality Assessment panel, Preview PDF, Submit Report.
+- **Attendance Log (`/student/attendance`):** Summary cards, filter tabs, grouped attendance table, Export CSV button.
+- **Student Calendar (`/student/calendar`):** Full-month view. Red dots (Deadlines), Gray blocks (Holidays), Yellow blocks (Approved Deviations). Prominent "Projected OJT Completion" banner.
+- **My Profile & Settings:** Personal info, read-only internship assignment, notification toggles, DSAR "Request my data" button.
 
 ### Faculty Adviser Role Screens
-
-#### Screen: Faculty Dashboard (`/faculty/dashboard`)
-- **Layout:** KPI row (Total Students, Submitted This Week, Pending Review, Not Yet Submitted). Class group tabs. Student compliance table (#, STUDENT, HOURS PROGRESS, DOCS, WK REPORT, AI FLAG, ACTION). Bulk actions (Export, Bulk Endorse).
-
-#### Screen: Class Groups (`/faculty/class-groups`)
-- **Layout:** Group cards (Group name, student count, program, required hours, active count, flagged count, average compliance %). Expanded student directory table.
-
-#### Screen: Report Review (`/faculty/reports/review/[reportId]`)
-- **Layout:** Report header. Daily Entries (left column). AI Quality Assessment panel (right column: vague indicator, similar phrasing detection, overall sentiment, hours match schedule, disclaimer). Your Review section (Revision note text area, Return button, Approve button). Student Info sidebar.
-- **Process:** Faculty examines AI panel and entries. Approve (status → Approved) or Return (status → Returned, requires note). "Regard" and "Disregard" actions available per FR-WR-06.
-
-#### Screen: Pre-Deployment Checklists (`/faculty/checklists`)
-- **Layout:** Summary header. Filter tabs. Class group sub-tab. Checklist item table (STUDENT, DOCUMENT, SUBMITTED, PROGRESS, STATUS, ACTIONS).
-
-#### Screen: Endorsement Letters (`/faculty/endorse-letters`)
-- **Layout:** Summary cards (Generated, Ready to Generate, Blocked). Bulk endorsement bar. Student endorsement table (STUDENT, COMPANY, GENERATED, CHECKLIST, STATUS, ACTIONS).
-- **Pre-conditions:** Student must have all 9 pre-deployment checklist items approved (9/9) to be eligible.
-
-#### Screen: Faculty Calendar (`/faculty/calendar`) *(NEW)*
-- **Layout:** Calendar view aggregating deadlines for all assigned `faculty_class_groups`. Highlights Tuesdays with high expected submission volumes across all assigned groups.
+- **Faculty Dashboard (`/faculty/dashboard`):** KPI row, class group tabs, student compliance table (Hours, Docs, WR Status, AI Flag, Actions), Bulk Endorse/Export.
+- **Class Groups (`/faculty/class-groups`):** Group cards with expanded student directory.
+- **Report Review (`/faculty/reports/review/[reportId]`):** Daily entries, AI Quality Assessment panel (vague indicator, similar phrasing, sentiment), Revision note area, Approve/Return/Regard/Disregard buttons.
+- **Pre-Deployment Checklists (`/faculty/checklists`):** Pending/Returned/Complete filter tabs, checklist item table with View/Approve/Return actions.
+- **Endorsement Letters (`/faculty/endorse-letters`):** Summary cards, Bulk endorsement bar, student table showing 9/9 checklist requirement for generation.
+- **Faculty Calendar (`/faculty/calendar`):** Aggregated deadlines for all assigned `faculty_class_groups`, highlighting high-volume submission weeks.
 
 ### Department Coordinator Role Screens
-
-#### Screen: Department Compliance Dashboard (`/coordinator/dashboard`)
-- **Layout:** Program KPI cards (BSIT, BSCS, BMMA counts + compliance %, MOA Expiring Soon count). MOA expiry alert banner. All Students Compliance Overview table (Filter controls, Export Excel button, columns: STUDENT ID, NAME, PROGRAM, COMPANY, HOURS, DOCS, WEEKLY RPT, STATUS).
-
-#### Screen: Companies & MOA (`/coordinator/companies`)
-- **Layout:** Summary cards. MOA expiry alert banner. All Partner Companies table (COMPANY, MODALITY, INTERNS, MOA VALID TO, PROGRAMS, STATUS, ACTIONS). "+ Add Company" button.
-
-#### Screen: Work Plans (`/coordinator/work-plans`)
-- **Layout:** Summary cards (Pending Approval, Approved & Locked, Returned for Revision). Pending Work Plan Reviews table. Recently Approved section.
-
-#### Screen: Reports & Export (`/coordinator/reports`)
-- **Layout:** Export Builder (left). Quick Export Templates (right: Compliance Master List, Hours Summary, Checklist Status, Flagged Students). Recent Export History table.
-
-#### Screen: Coordinator Calendar (`/coordinator/calendar`) *(NEW)*
-- **Layout:** Calendar view showing department-wide milestones. Events: MOA Expiration warnings (Orange), Clustered Projected Completion Dates (Green) to anticipate endorsement letter generation spikes.
+- **Department Compliance Dashboard (`/coordinator/dashboard`):** Program KPI cards, MOA expiry alert banner, All Students Compliance Overview table with filters and Excel export.
+- **Companies & MOA (`/coordinator/companies`):** Summary cards, MOA expiry banner, Partner Companies table with Renew/View actions.
+- **Work Plans (`/coordinator/work-plans`):** Summary cards, Pending Work Plan Reviews table, Recently Approved section.
+- **Reports & Export (`/coordinator/reports`):** Export Builder, Quick Export Templates (Compliance Master List, Hours Summary, Checklist Status, Flagged Students), Recent Export History.
+- **Coordinator Calendar (`/coordinator/calendar`):** Department-wide milestones, MOA expirations, clustered projected completion dates.
 
 ### Super Admin Role Screens
-
-#### Screen: System Settings (`/admin/system-settings`)
-- **Layout:** Required Hours Configuration. User Management Table. Audit Log (Filter and Export buttons). Semester Management.
-
-#### Screen: Role Assignments (`/admin/role-assignments`)
-- **Layout:** Summary bar. Filter tabs. All Users table. Note banner regarding immutable audit logging.
-
-#### Screen: Holiday Calendar (`/admin/holiday-calendar`)
-- **Layout:** Holiday List table. Calendar widget. Calendar Settings (Applicable Semester dropdown, Auto-populate toggle, Save button). "+ Add Holiday" button.
-
-#### Screen: Export Center (`/admin/export-center`)
-- **Layout:** MFA Requirement banner. Bulk Export — All Data (6 export cards: All Students & Compliance, All Weekly Reports, Audit Log Export, All Company & MOA Records, User Accounts List, AI Flag Summary). Audit Log table.
-
-#### Screen: Settings — Super Admin (`/admin/settings`)
-- **Layout:** Notification Intervals. AI Module Settings (Similarity threshold, quality feedback toggle, sentiment tracking toggle). Security (Session timeout).
+- **System Settings (`/admin/system-settings`):** Required Hours Configuration, User Management Table, Audit Log, Semester Management.
+- **Role Assignments (`/admin/Role-assignments`):** Summary bar, filter tabs, All Users table, immutable audit logging banner.
+- **Holiday Calendar (`/admin/holiday-calendar`):** Holiday List table, Calendar widget, Calendar Settings (Auto-populate toggle).
+- **Export Center (`/admin/export-center`):** MFA Requirement banner, 6 Bulk Export cards, Audit Log table.
+- **Settings — Super Admin (`/admin/settings`):** Notification Intervals, AI Module Settings (Similarity threshold, toggles), Security (Session timeout).
 
 ---
 
@@ -805,5 +785,4 @@ Vercel (CDN/serverless) | Supabase (DB/Storage/RLS) | Gemini API | Resend | Pupp
 
 ---
 
-*End of IDSMS-CIS Product Requirements Document v1.1*
-```
+*End of IDSMS-CIS Product Requirements Document v1.2*
