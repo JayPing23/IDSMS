@@ -1,0 +1,20 @@
+// Prisma schema (starter)
+// NOTE: Before running migrations or using pgvector, run on your Supabase SQL console:
+// CREATE EXTENSION IF NOT EXISTS vector;
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

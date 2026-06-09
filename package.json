@@ -1,0 +1,17 @@
+{
+  "name": "idsms-cis",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "format": "prettier --write .",
+    "prisma:generate": "prisma generate",
+    "prepare": "husky install"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
